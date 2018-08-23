@@ -19,6 +19,7 @@ package com.floreantpos.ui.views.payment;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -28,13 +29,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.Action;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -66,6 +72,7 @@ import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
 
@@ -83,6 +90,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	private String token;
 	private String QR;
 	JLabel lblStatus;
+	JLabel lblWaiting;
 	JLabel lblBalance;
 	JLabel lblAmount;
 	
@@ -105,7 +113,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 
 		JPanel panel = getContentPanel();
 		getContentPane().add(panel, BorderLayout.CENTER);
-		panel.setLayout(new MigLayout("", "[][grow]", "[][]")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		panel.setLayout(new MigLayout("", "[][grow]", "[][][][]")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		
 		JLabel lblSelectPaymentType = new JLabel("Payment Type"); //$NON-NLS-1$
@@ -117,61 +125,51 @@ public class DWalletDialog extends OkCancelOptionDialog {
 				updateLabelsAmount();
 			}
 		});
-		panel.add(cbPaymentType, "cell 1 0,growx"); //$NON-NLS-1$
+		panel.add(cbPaymentType, "cell 1 0 3 1,growx"); //$NON-NLS-1$
 		cbPaymentType.setModel(new DefaultComboBoxModel<PaymentTypeWallet>(PaymentTypeWallet.values()));
 		
 
-		JLabel lblTextQR = new JLabel("QR"); //$NON-NLS-1$
-		panel.add(lblTextQR, "cell 0 1,alignx trailing"); //$NON-NLS-1$
-		
-		
-		JPopupMenu menu = new JPopupMenu();
-		Action paste = new DefaultEditorKit.PasteAction();
-        paste.putValue(Action.NAME, "Paste");
-        paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
-        menu.add( paste );
-		
-        tfQRTest = new FixedLengthTextField();
-        tfQRTest.setLength(300);
-        tfQRTest.setComponentPopupMenu( menu );
-		panel.add(tfQRTest, "cell 1 1,growx"); //$NON-NLS-1$
+//		JLabel lblTextQR = new JLabel("QR"); //$NON-NLS-1$
+//		panel.add(lblTextQR, "cell 0 1,alignx trailing"); //$NON-NLS-1$
+//		
+//		
+//		JPopupMenu menu = new JPopupMenu();
+//		Action paste = new DefaultEditorKit.PasteAction();
+//        paste.putValue(Action.NAME, "Paste");
+//        paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
+//        menu.add( paste );
+//		
+//        tfQRTest = new FixedLengthTextField();
+//        tfQRTest.setLength(300);
+//        tfQRTest.setComponentPopupMenu( menu );
+//		panel.add(tfQRTest, "cell 1 1,growx"); //$NON-NLS-1$
 		
 		lblBalance = new JLabel("Balance: "); //$NON-NLS-1$
 		panel.add(lblBalance, "cell 0 2,alignx trailing"); //$NON-NLS-1$
 		
 		lblAmount = new JLabel(String.valueOf(tenderAmount)); //$NON-NLS-1$
-		panel.add(lblAmount, "cell 1 2,alignx trailing"); //$NON-NLS-1$
+		panel.add(lblAmount, "cell 1 2 3 1,alignx trailing"); //$NON-NLS-1$
 		
 		webcam = Webcam.getDefault();
-		//webcam.setViewSize(WebcamResolution.VGA.getSize());
-		webcam.setViewSize(new Dimension(320, 240));
 		
+//		webcam.setViewSize(WebcamResolution.VGA.getSize());
+		webcam.setViewSize(webcam.getViewSizes()[1]);
 		
 		webcamPanel = new WebcamPanel(webcam);
-		webcamPanel.setImageSizeDisplayed(true);
-		panel.add(webcamPanel, "cell 1 3,growx"); //$NON-NLS-1$
+		panel.add(webcamPanel, "cell 1 3 3 1,growx"); //$NON-NLS-1$
 		
 		
 		lblStatus = new JLabel(""); //$NON-NLS-1$
 		panel.add(lblStatus, "cell 1 4,alignx trailing"); //$NON-NLS-1$
 		
+		ImageIcon imageIcon = new ImageIcon("resources/icons/waiting01.gif");
+		lblWaiting = new JLabel(imageIcon); //$NON-NLS-1$
 		
+		panel.add(lblWaiting, "cell 2 4,alignx trailing"); //$NON-NLS-1$
+		lblWaiting.setVisible(false);
+
 		
-//		JFrame frame = new JFrame();
-//		frame.add(webcamPanel);
-//		frame.setLocationRelativeTo(null);
-//		frame.pack();
-//		frame.setVisible(true);
 
-//		JLabel lblFaceValue = new JLabel(Messages.getString("GiftCertDialog.8")); //$NON-NLS-1$
-//		panel.add(lblFaceValue, "cell 0 1,alignx trailing"); //$NON-NLS-1$
-
-//		tfFaceValue = new DoubleTextField();
-//		tfFaceValue.setText("50"); //$NON-NLS-1$
-//		panel.add(tfFaceValue, "cell 1 1,growx"); //$NON-NLS-1$
-//
-//		qwertyKeyPad = new QwertyKeyPad();
-//		panel.add(qwertyKeyPad, "newline, gaptop 10px, span"); //$NON-NLS-1$
 	}
 	
 	protected void updateLabelsAmount() {
@@ -198,6 +196,12 @@ public class DWalletDialog extends OkCancelOptionDialog {
 			BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 			Result result = new MultiFormatReader().decode(bitmap);
 			
+			webcamPanel.pause();
+//			for(ResultPoint rp: result.getResultPoints()) {
+//				System.out.println(rp);
+//			}
+			
+			
 			QR = result.getText();
 			System.out.println("QR reading: " + QR);
 			
@@ -214,34 +218,48 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	@Override
 	public void doOk() {
 		lblStatus.setText("Reading QR...");
-		for(int i = 0; i < 50; i++) {
-			QR = readQR(webcam.getImage());
-			webcamPanel.repaint();
-			if(QR !=null)
-				break;
-			try {
-				Thread.sleep(60);
-			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		}
+		btnOk.setEnabled(false);
+		btnCancel.setEnabled(false); 
 		
-		
-		if (StringUtils.isEmpty(getQR()) && StringUtils.isEmpty(QR)) {
-			POSMessageDialog.showMessage("Not QR readed"); //$NON-NLS-1$
-			return;
-		}
-		
-		lblStatus.setText("Transaction Request...");
-		if(!postTransaction()) {
-			return;
-		}
-		
-		
+		new Thread() {
+			public void run() {
+				for(int i = 0; i < 50; i++) {
+					QR = readQR(webcam.getImage());
+					webcamPanel.repaint();
+					if(QR !=null && QR.matches("\\w+\\.\\w+\\.\\w+"))
+						break;
+					try {
+						Thread.sleep(60);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}
+				if(QR !=null) {
+					lblStatus.setText("Transaction Request...");
+					lblWaiting.setVisible(true);
+					if(!postTransaction()) {
+						lblStatus.setText("Transaction Failed...");
+						btnOk.setEnabled(true);
+						btnCancel.setEnabled(true);
+						lblWaiting.setVisible(false);
+						webcamPanel.start();
+					}else {
+						setCanceled(false);
+						dispose();
+					}
+				}else {
+					lblStatus.setText("QR not found, please retry...");
+					btnOk.setEnabled(true);
+					btnCancel.setEnabled(true);
+				}
 
-		setCanceled(false);
-		dispose();
+			}
+			
+			
+		}.start();
+		
+		return;
 	}
 	
 	@Override
@@ -306,7 +324,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		
 		JsonObject json = new JsonObject();
 		json.addProperty("description", "FloreantPOS");    
-		json.addProperty("amount", amount);    
+		json.addProperty("amount", "-"+amount);    
 		json.addProperty("type", cbPaymentType.getSelectedItem().toString());    
 		json.addProperty("purchaseDate", LocalDate.now().toString());    
 		json.addProperty("qr", dWalletUser);    

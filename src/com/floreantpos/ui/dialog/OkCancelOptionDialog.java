@@ -38,8 +38,8 @@ import com.floreantpos.ui.TitlePanel;
 import com.floreantpos.util.POSUtil;
 
 public abstract class OkCancelOptionDialog extends POSDialog {
-	private PosButton btnOk;
-	private PosButton btnCancel;
+	protected PosButton btnOk;
+	protected PosButton btnCancel;
 
 	private TitlePanel titlePanel;
 	private TransparentPanel contentPanel;
