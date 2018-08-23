@@ -155,7 +155,7 @@ public class SettleTicketProcessor implements CardInputListener {
 				break;
 				
 			case DWALLET:
-				DWalletDialog dWalletDialog = new DWalletDialog();
+				DWalletDialog dWalletDialog = new DWalletDialog(tenderAmount);
 				dWalletDialog.pack();
 				dWalletDialog.open();
 

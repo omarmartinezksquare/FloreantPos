@@ -18,9 +18,12 @@
 package com.floreantpos.ui.views.payment;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,9 +32,11 @@ import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.ImageIO;
 import javax.swing.Action;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -52,7 +57,17 @@ import com.floreantpos.swing.FixedLengthTextField;
 import com.floreantpos.swing.QwertyKeyPad;
 import com.floreantpos.ui.dialog.OkCancelOptionDialog;
 import com.floreantpos.ui.dialog.POSMessageDialog;
+import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamPanel;
+import com.github.sarxos.webcam.WebcamResolution;
 import com.google.gson.JsonObject;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.Result;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
 
 public class DWalletDialog extends OkCancelOptionDialog {
 	private FixedLengthTextField tfQRTest;
@@ -61,12 +76,26 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	//private QwertyKeyPad qwertyKeyPad;
 	
 	private JComboBox cbPaymentType;
+	private WebcamPanel webcamPanel;
+	private Webcam webcam;
+	
 	
 	private String token;
+	private String QR;
+	JLabel lblStatus;
+	JLabel lblBalance;
+	JLabel lblAmount;
+	
+	private double tenderAmount;
+	private double pointsAmount;
+	private String amount;
 
-	public DWalletDialog() {
+	public DWalletDialog(double tenderAmount) {
 		super();
-		
+		this.tenderAmount = tenderAmount;
+		amount = String.valueOf(tenderAmount);
+		pointsAmount = tenderAmount*Double.valueOf(CardConfig.getDWalletPointConversion());
+				
 		token = getToken();
 		
 		System.out.println(token);
@@ -77,7 +106,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		JPanel panel = getContentPanel();
 		getContentPane().add(panel, BorderLayout.CENTER);
 		panel.setLayout(new MigLayout("", "[][grow]", "[][]")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-		
+
 		
 		JLabel lblSelectPaymentType = new JLabel("Payment Type"); //$NON-NLS-1$
 		panel.add(lblSelectPaymentType, "cell 0 0,alignx leading"); //$NON-NLS-1$
@@ -85,15 +114,15 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		cbPaymentType = new JComboBox();
 		cbPaymentType.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//updateCheckBoxes();
+				updateLabelsAmount();
 			}
 		});
-		add(cbPaymentType, "cell 1 0,growx"); //$NON-NLS-1$
+		panel.add(cbPaymentType, "cell 1 0,growx"); //$NON-NLS-1$
 		cbPaymentType.setModel(new DefaultComboBoxModel<PaymentTypeWallet>(PaymentTypeWallet.values()));
 		
 
-		JLabel lblGiftCertificateNumber = new JLabel("QR"); //$NON-NLS-1$
-		panel.add(lblGiftCertificateNumber, "cell 0 1,alignx trailing"); //$NON-NLS-1$
+		JLabel lblTextQR = new JLabel("QR"); //$NON-NLS-1$
+		panel.add(lblTextQR, "cell 0 1,alignx trailing"); //$NON-NLS-1$
 		
 		
 		JPopupMenu menu = new JPopupMenu();
@@ -105,8 +134,34 @@ public class DWalletDialog extends OkCancelOptionDialog {
         tfQRTest = new FixedLengthTextField();
         tfQRTest.setLength(300);
         tfQRTest.setComponentPopupMenu( menu );
-		
 		panel.add(tfQRTest, "cell 1 1,growx"); //$NON-NLS-1$
+		
+		lblBalance = new JLabel("Balance: "); //$NON-NLS-1$
+		panel.add(lblBalance, "cell 0 2,alignx trailing"); //$NON-NLS-1$
+		
+		lblAmount = new JLabel(String.valueOf(tenderAmount)); //$NON-NLS-1$
+		panel.add(lblAmount, "cell 1 2,alignx trailing"); //$NON-NLS-1$
+		
+		webcam = Webcam.getDefault();
+		//webcam.setViewSize(WebcamResolution.VGA.getSize());
+		webcam.setViewSize(new Dimension(320, 240));
+		
+		
+		webcamPanel = new WebcamPanel(webcam);
+		webcamPanel.setImageSizeDisplayed(true);
+		panel.add(webcamPanel, "cell 1 3,growx"); //$NON-NLS-1$
+		
+		
+		lblStatus = new JLabel(""); //$NON-NLS-1$
+		panel.add(lblStatus, "cell 1 4,alignx trailing"); //$NON-NLS-1$
+		
+		
+		
+//		JFrame frame = new JFrame();
+//		frame.add(webcamPanel);
+//		frame.setLocationRelativeTo(null);
+//		frame.pack();
+//		frame.setVisible(true);
 
 //		JLabel lblFaceValue = new JLabel(Messages.getString("GiftCertDialog.8")); //$NON-NLS-1$
 //		panel.add(lblFaceValue, "cell 0 1,alignx trailing"); //$NON-NLS-1$
@@ -118,20 +173,81 @@ public class DWalletDialog extends OkCancelOptionDialog {
 //		qwertyKeyPad = new QwertyKeyPad();
 //		panel.add(qwertyKeyPad, "newline, gaptop 10px, span"); //$NON-NLS-1$
 	}
+	
+	protected void updateLabelsAmount() {
+		// TODO Auto-generated method stub
+		if(cbPaymentType.getSelectedItem() == PaymentTypeWallet.BALANCE) {
+			lblBalance.setText("Balance");
+			amount = String.valueOf(tenderAmount);
+			lblAmount.setText(amount);
+			
+		}
+		else if(cbPaymentType.getSelectedItem() == PaymentTypeWallet.POINTS){
+			lblBalance.setText("Points");
+			amount = String.valueOf(pointsAmount);
+			lblAmount.setText(amount);
+			
+		}
+//		lblBalance.setText(cbPaymentType.getSelectedItem().toString());
+	}
 
+	public String readQR(BufferedImage bufferedImage) {
+		String QR = null;
+		try {
+			LuminanceSource source = new BufferedImageLuminanceSource(bufferedImage);
+			BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+			Result result = new MultiFormatReader().decode(bitmap);
+			
+			QR = result.getText();
+			System.out.println("QR reading: " + QR);
+			
+		} catch (NotFoundException e) {
+			// TODO Auto-generated catch block
+			//System.out.println("There is no QR code in the image");
+			e.printStackTrace();
+		}
+		return QR;
+	}
+
+	
+	
 	@Override
 	public void doOk() {
-		if (StringUtils.isEmpty(getQR())) {
+		lblStatus.setText("Reading QR...");
+		for(int i = 0; i < 50; i++) {
+			QR = readQR(webcam.getImage());
+			webcamPanel.repaint();
+			if(QR !=null)
+				break;
+			try {
+				Thread.sleep(60);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+		
+		
+		if (StringUtils.isEmpty(getQR()) && StringUtils.isEmpty(QR)) {
 			POSMessageDialog.showMessage("Not QR readed"); //$NON-NLS-1$
 			return;
 		}
 		
+		lblStatus.setText("Transaction Request...");
 		if(!postTransaction()) {
 			return;
 		}
+		
+		
 
 		setCanceled(false);
 		dispose();
+	}
+	
+	@Override
+	public void dispose(){
+		webcam.close();
+		super.dispose();
 	}
 
 	public String getQR() {
@@ -179,21 +295,29 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	}
 	
 	public boolean postTransaction() {
-		String dWalletUser = getQR();
-		String paymentTypeWallet = CardConfig.getDWalletPaymentType();
+		String dWalletUser;
+		if(QR != null) {
+			dWalletUser = QR;
+		}
+		else{
+			dWalletUser = getQR();
+		}
+		
 		
 		JsonObject json = new JsonObject();
 		json.addProperty("description", "FloreantPOS");    
-		json.addProperty("amount", "-20.00");    
-		json.addProperty("type", paymentTypeWallet);    
+		json.addProperty("amount", amount);    
+		json.addProperty("type", cbPaymentType.getSelectedItem().toString());    
 		json.addProperty("purchaseDate", LocalDate.now().toString());    
 		json.addProperty("qr", dWalletUser);    
+		
+		System.out.println(json.toString());
 		
 		String postUrl = "https://dwallet.survivorsofmars.tk/api/v1/transaction/qr";
 		try {
 			URL url = new URL(postUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(20000);
+            conn.setConnectTimeout(40000);
             conn.setRequestProperty("Authorization", "Bearer " + token );
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             conn.setDoOutput(true);
@@ -216,6 +340,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 
 		} catch (IOException e) {
 			e.printStackTrace();
+			return false;
 		}
 		
 		return true;

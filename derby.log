@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-Mon Aug 20 11:11:39 CDT 2018:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-0165-581b-2684-00000a001838 
+Thu Aug 23 09:41:30 CDT 2018:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.8.1.2 - (1095077): instance a816c00e-0165-673b-b0b6-000009ed7d78 
 on database directory /Users/omarmartinez/Documents/floreantpos/floreantpos-code-r1892-trunk/database/derby-single/posdb  with class loader sun.misc.Launcher$AppClassLoader@4e25154f 
 Loaded from file:/Users/omarmartinez/.m2/repository/org/apache/derby/derby/10.8.1.2/derby-10.8.1.2.jar
 java.vendor=Oracle Corporation
