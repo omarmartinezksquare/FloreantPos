@@ -18,7 +18,9 @@
 package com.floreantpos.ui.views.payment;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -41,6 +43,7 @@ import javax.imageio.ImageIO;
 import javax.swing.Action;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -60,6 +63,7 @@ import com.floreantpos.config.CardConfig;
 import com.floreantpos.model.PaymentTypeWallet;
 import com.floreantpos.swing.DoubleTextField;
 import com.floreantpos.swing.FixedLengthTextField;
+import com.floreantpos.swing.GlassPane;
 import com.floreantpos.swing.QwertyKeyPad;
 import com.floreantpos.ui.dialog.OkCancelOptionDialog;
 import com.floreantpos.ui.dialog.POSMessageDialog;
@@ -90,7 +94,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	private String token;
 	private String QR;
 	JLabel lblStatus;
-	JLabel lblWaiting;
+//	JLabel lblWaiting;
 	JLabel lblBalance;
 	JLabel lblAmount;
 	
@@ -162,12 +166,22 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		lblStatus = new JLabel(""); //$NON-NLS-1$
 		panel.add(lblStatus, "cell 1 4,alignx trailing"); //$NON-NLS-1$
 		
-		ImageIcon imageIcon = new ImageIcon("resources/icons/waiting01.gif");
-		lblWaiting = new JLabel(imageIcon); //$NON-NLS-1$
+//		ImageIcon imageIcon = new ImageIcon("resources/icons/waiting01.gif");
+//		lblWaiting = new JLabel(imageIcon); //$NON-NLS-1$
+//		
+//		panel.add(lblWaiting, "cell 2 4,alignx trailing"); //$NON-NLS-1$
+//		lblWaiting.setVisible(false);
+//		
 		
-		panel.add(lblWaiting, "cell 2 4,alignx trailing"); //$NON-NLS-1$
-		lblWaiting.setVisible(false);
-
+		GlassPane glassPane = new GlassPane();
+		glassPane.setOpacity(0.70f);
+		
+		ImageIcon imageIcon2 = new ImageIcon("resources/icons/resizedOrangeLoader.gif");
+		JLabel glassLabel = new JLabel(imageIcon2);
+		glassPane.add(glassLabel);
+		this.setGlassPane(glassPane);
+//		this.getGlassPane().setVisible(true);
+		
 		
 
 	}
@@ -196,7 +210,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 			BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 			Result result = new MultiFormatReader().decode(bitmap);
 			
-			webcamPanel.pause();
+			//webcamPanel.pause();
 //			for(ResultPoint rp: result.getResultPoints()) {
 //				System.out.println(rp);
 //			}
@@ -212,6 +226,12 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		}
 		return QR;
 	}
+	
+	public void switchGlassPane() {
+		
+		this.getGlassPane().setVisible(!this.getGlassPane().isVisible());
+		
+	}
 
 	
 	
@@ -225,8 +245,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 			public void run() {
 				for(int i = 0; i < 50; i++) {
 					QR = readQR(webcam.getImage());
-					webcamPanel.repaint();
-					if(QR !=null && QR.matches("\\w+\\.\\w+\\.\\w+"))
+					if(QR !=null && QR.matches(".+\\..+\\..+"))
 						break;
 					try {
 						Thread.sleep(60);
@@ -237,12 +256,14 @@ public class DWalletDialog extends OkCancelOptionDialog {
 				}
 				if(QR !=null) {
 					lblStatus.setText("Transaction Request...");
-					lblWaiting.setVisible(true);
+					switchGlassPane();
+//					lblWaiting.setVisible(true);
 					if(!postTransaction()) {
 						lblStatus.setText("Transaction Failed...");
 						btnOk.setEnabled(true);
 						btnCancel.setEnabled(true);
-						lblWaiting.setVisible(false);
+//						lblWaiting.setVisible(false);
+						switchGlassPane();
 						webcamPanel.start();
 					}else {
 						setCanceled(false);
@@ -250,6 +271,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 					}
 				}else {
 					lblStatus.setText("QR not found, please retry...");
+					webcamPanel.start();
 					btnOk.setEnabled(true);
 					btnCancel.setEnabled(true);
 				}
