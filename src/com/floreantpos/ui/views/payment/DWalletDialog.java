@@ -20,6 +20,7 @@ package com.floreantpos.ui.views.payment;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
@@ -35,6 +36,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -90,23 +94,28 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	private WebcamPanel webcamPanel;
 	private Webcam webcam;
 	
-	
+	private String dueAmountText = "Due amount:";
+	private String duePointsText  = "Due points:";
 	private String token;
 	private String QR;
 	JLabel lblStatus;
-//	JLabel lblWaiting;
+	JLabel lblWaiting;
 	JLabel lblBalance;
 	JLabel lblAmount;
 	
 	private double tenderAmount;
-	private double pointsAmount;
+	private int pointsAmount;
 	private String amount;
+	
+	private String getStrTenderAmount() {
+		return "$ " + new DecimalFormat(".00").format(tenderAmount) ;
+	}
 
 	public DWalletDialog(double tenderAmount) {
 		super();
 		this.tenderAmount = tenderAmount;
 		amount = String.valueOf(tenderAmount);
-		pointsAmount = tenderAmount*Double.valueOf(CardConfig.getDWalletPointConversion());
+		pointsAmount = (int) (tenderAmount*Double.valueOf(CardConfig.getDWalletPointConversion()));
 				
 		token = getToken();
 		
@@ -121,6 +130,7 @@ public class DWalletDialog extends OkCancelOptionDialog {
 
 		
 		JLabel lblSelectPaymentType = new JLabel("Payment Type"); //$NON-NLS-1$
+		lblSelectPaymentType.setFont(new Font(lblSelectPaymentType.getFont().getFontName(), Font.PLAIN, 16));
 		panel.add(lblSelectPaymentType, "cell 0 0,alignx leading"); //$NON-NLS-1$
 		
 		cbPaymentType = new JComboBox();
@@ -148,10 +158,12 @@ public class DWalletDialog extends OkCancelOptionDialog {
 //        tfQRTest.setComponentPopupMenu( menu );
 //		panel.add(tfQRTest, "cell 1 1,growx"); //$NON-NLS-1$
 		
-		lblBalance = new JLabel("Balance: "); //$NON-NLS-1$
+		lblBalance = new JLabel(dueAmountText); //$NON-NLS-1$
+		lblBalance.setFont(new Font(lblBalance.getFont().getFontName(), Font.PLAIN, 16));
 		panel.add(lblBalance, "cell 0 2,alignx trailing"); //$NON-NLS-1$
 		
-		lblAmount = new JLabel(String.valueOf(tenderAmount)); //$NON-NLS-1$
+		lblAmount = new JLabel(getStrTenderAmount()); //$NON-NLS-1$
+		lblAmount.setFont(new Font(lblAmount.getFont().getFontName(), Font.PLAIN, 16));
 		panel.add(lblAmount, "cell 1 2 3 1,alignx trailing"); //$NON-NLS-1$
 		
 		webcam = Webcam.getDefault();
@@ -166,11 +178,11 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		lblStatus = new JLabel(""); //$NON-NLS-1$
 		panel.add(lblStatus, "cell 1 4,alignx trailing"); //$NON-NLS-1$
 		
-//		ImageIcon imageIcon = new ImageIcon("resources/icons/waiting01.gif");
-//		lblWaiting = new JLabel(imageIcon); //$NON-NLS-1$
-//		
-//		panel.add(lblWaiting, "cell 2 4,alignx trailing"); //$NON-NLS-1$
-//		lblWaiting.setVisible(false);
+		ImageIcon imageIcon = new ImageIcon("resources/icons/waiting01.gif");
+		lblWaiting = new JLabel(imageIcon); //$NON-NLS-1$
+		
+		panel.add(lblWaiting, "cell 2 4,alignx trailing"); //$NON-NLS-1$
+		lblWaiting.setVisible(false);
 //		
 		
 		GlassPane glassPane = new GlassPane();
@@ -189,15 +201,15 @@ public class DWalletDialog extends OkCancelOptionDialog {
 	protected void updateLabelsAmount() {
 		// TODO Auto-generated method stub
 		if(cbPaymentType.getSelectedItem() == PaymentTypeWallet.BALANCE) {
-			lblBalance.setText("Balance");
+			lblBalance.setText(dueAmountText);
 			amount = String.valueOf(tenderAmount);
-			lblAmount.setText(amount);
+			lblAmount.setText(getStrTenderAmount());
 			
 		}
 		else if(cbPaymentType.getSelectedItem() == PaymentTypeWallet.POINTS){
-			lblBalance.setText("Points");
+			lblBalance.setText(duePointsText);
 			amount = String.valueOf(pointsAmount);
-			lblAmount.setText(amount);
+			lblAmount.setText(amount + " pts");
 			
 		}
 //		lblBalance.setText(cbPaymentType.getSelectedItem().toString());
@@ -217,12 +229,12 @@ public class DWalletDialog extends OkCancelOptionDialog {
 			
 			
 			QR = result.getText();
-			System.out.println("QR reading: " + QR);
+			//System.out.println("QR reading: " + QR);
 			
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
 			//System.out.println("There is no QR code in the image");
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		return QR;
 	}
@@ -240,38 +252,40 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		lblStatus.setText("Reading QR...");
 		btnOk.setEnabled(false);
 		btnCancel.setEnabled(false); 
-		
+		lblWaiting.setVisible(true);
 		new Thread() {
 			public void run() {
 				for(int i = 0; i < 50; i++) {
 					QR = readQR(webcam.getImage());
-					if(QR !=null && QR.matches(".+\\..+\\..+"))
+					if(QR !=null && QR.matches(".+\\..+\\..+")) {
+						webcamPanel.pause();
 						break;
+					}
 					try {
 						Thread.sleep(60);
 					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
+						//e1.printStackTrace();
 					}
 				}
+				lblWaiting.setVisible(false);
 				if(QR !=null) {
 					lblStatus.setText("Transaction Request...");
 					switchGlassPane();
-//					lblWaiting.setVisible(true);
+					
 					if(!postTransaction()) {
 						lblStatus.setText("Transaction Failed...");
 						btnOk.setEnabled(true);
 						btnCancel.setEnabled(true);
-//						lblWaiting.setVisible(false);
+						
 						switchGlassPane();
-						webcamPanel.start();
+						webcamPanel.resume();
 					}else {
 						setCanceled(false);
 						dispose();
 					}
 				}else {
 					lblStatus.setText("QR not found, please retry...");
-					webcamPanel.start();
+//					webcamPanel.resume();
 					btnOk.setEnabled(true);
 					btnCancel.setEnabled(true);
 				}
@@ -348,7 +362,9 @@ public class DWalletDialog extends OkCancelOptionDialog {
 		json.addProperty("description", "FloreantPOS");    
 		json.addProperty("amount", "-"+amount);    
 		json.addProperty("type", cbPaymentType.getSelectedItem().toString());    
-		json.addProperty("purchaseDate", LocalDate.now().toString());    
+//		json.addProperty("purchaseDate", LocalDateTime.now().toString() + "-05:00");    
+//		json.addProperty("purchaseDate", LocalDateTime.now().toString() + ZonedDateTime.now().getOffset());    
+		json.addProperty("purchaseDate", ZonedDateTime.now().toOffsetDateTime().toString());    
 		json.addProperty("qr", dWalletUser);    
 		
 		System.out.println(json.toString());
