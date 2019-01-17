@@ -9,7 +9,7 @@
 	</properties>
 
 	<scm>
-		<connection>scm:svn:http://svn.code.sf.net/p/floreantpos/code/trunk</connection>
+		<connection>scm:git:https://github.com/omarmartinezksquare/FloreantPos.git</connection>
 	</scm>
 
 	<build>
